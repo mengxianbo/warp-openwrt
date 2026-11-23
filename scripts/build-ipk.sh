@@ -29,6 +29,7 @@ test -s "$ROOT/LICENSE" || { echo "project LICENSE missing" >&2; exit 1; }
 test -s "$ROOT/LICENSES/usque-MIT.txt" || { echo "usque license missing" >&2; exit 1; }
 test -s "$ROOT/THIRD_PARTY_NOTICES.md" || { echo "third-party notices missing" >&2; exit 1; }
 test -s "$ROOT/go-dependency-licenses/GO_DEPENDENCY_LICENSES.csv" || { echo "Go dependency license report missing" >&2; exit 1; }
+test -s "$ROOT/go-dependency-licenses/GO_LICENSE_RISK_REPORT.md" || { echo "Go dependency license risk report missing" >&2; exit 1; }
 test -d "$ROOT/go-dependency-licenses" || { echo "Go dependency license directory missing" >&2; exit 1; }
 install -m 0644 "$ROOT/LICENSE" "$STAGE/usr/share/licenses/$PKG/LICENSE"
 install -m 0644 "$ROOT/LICENSES/usque-MIT.txt" "$STAGE/usr/share/licenses/$PKG/usque-MIT.txt"
