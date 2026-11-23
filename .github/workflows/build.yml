@@ -44,7 +44,7 @@ jobs:
           mkdir -p "$GITHUB_WORKSPACE/go-dependency-licenses"
           cd /tmp/usque-src
           go-licenses report . > "$GITHUB_WORKSPACE/go-dependency-licenses/GO_DEPENDENCY_LICENSES.csv"
-          go-licenses save . --save_path="$GITHUB_WORKSPACE/go-dependency-licenses"
+          go-licenses save . --save_path="$GITHUB_WORKSPACE/go-dependency-licenses/texts"
           test -s "$GITHUB_WORKSPACE/go-dependency-licenses/GO_DEPENDENCY_LICENSES.csv"
           cd "$GITHUB_WORKSPACE"
           tar -czf go-dependency-licenses.tar.gz go-dependency-licenses
