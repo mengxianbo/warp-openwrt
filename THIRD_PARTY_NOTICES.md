@@ -17,8 +17,15 @@ The build workflow compiles usque from its upstream source; it does not vendor
 or modify the usque source code in this repository.
 
 usque itself depends on other Go modules. Their respective copyright and
-license terms remain applicable. Consult the upstream usque repository and its
-dependency metadata for the complete dependency/license inventory.
+license terms remain applicable. The GitHub Actions release workflow runs
+`google/go-licenses` v2.0.1 against the exact usque source used for the build.
+It bundles the generated `GO_DEPENDENCY_LICENSES.csv` report and the license
+texts/notices collected by the tool into every IPK under
+`/usr/share/licenses/warp-masque/go-dependencies/`. The CSV and a compressed
+copy of the collected dependency-license directory are also attached to each
+GitHub Release. This inventory covers Go package dependencies visible to the
+tool; it does not replace review of non-Go code, operating-system packages, or
+licenses that the scanner cannot identify.
 
 ## OpenWrt and LuCI
 
