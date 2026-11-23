@@ -2,7 +2,7 @@ name: Build WARP MASQUE IPK
 
 on:
   push:
-    branches: [main, feature/warp-routing-isolation]
+    branches: [main, feature/warp-routing-isolation, build-66-validation]
   pull_request:
     branches: [main]
   workflow_dispatch:
