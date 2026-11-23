@@ -1,0 +1,83 @@
+#!/bin/sh
+# Route WARP MASQUE's sockets independently from other proxy daemons.
+# Rule 90 uses the main WAN table; rule 91 is a fail-closed fallback.
+set -eu
+
+uid="$(id -u warp 2>/dev/null || true)"
+[ -n "$uid" ] || {
+	echo "warp-route: dedicated user 'warp' does not exist" >&2
+	exit 1
+}
+range="${uid}-${uid}"
+PREF_MAIN=90
+PREF_BLOCK=91
+
+family_rules() {
+	if [ "$1" = "6" ]; then ip -6 rule show; else ip rule show; fi
+}
+
+family_del() {
+	if [ "$1" = "6" ]; then
+		ip -6 rule del pref "$PREF_BLOCK" uidrange "$range" prohibit 2>/dev/null || true
+		ip -6 rule del pref "$PREF_MAIN" uidrange "$range" lookup main 2>/dev/null || true
+	else
+		ip rule del pref "$PREF_BLOCK" uidrange "$range" prohibit 2>/dev/null || true
+		ip rule del pref "$PREF_MAIN" uidrange "$range" lookup main 2>/dev/null || true
+	fi
+}
+
+family_ensure() {
+	family="$1"
+	rules="$(family_rules "$family")" || return 1
+
+	if ! printf '%s\n' "$rules" | grep -Eq "^$PREF_MAIN:.*uidrange $range .*lookup main"; then
+		if printf '%s\n' "$rules" | grep -q "^$PREF_MAIN:"; then
+			echo "warp-route: IPv$family priority $PREF_MAIN is already occupied" >&2
+			return 1
+		fi
+		if [ "$family" = "6" ]; then
+			ip -6 rule add pref "$PREF_MAIN" uidrange "$range" lookup main || return 1
+		else
+			ip rule add pref "$PREF_MAIN" uidrange "$range" lookup main || return 1
+		fi
+	fi
+
+	rules="$(family_rules "$family")" || return 1
+	if ! printf '%s\n' "$rules" | grep -Eq "^$PREF_BLOCK:.*uidrange $range .*prohibit"; then
+		if printf '%s\n' "$rules" | grep -q "^$PREF_BLOCK:"; then
+			echo "warp-route: IPv$family priority $PREF_BLOCK is already occupied" >&2
+			return 1
+		fi
+		if [ "$family" = "6" ]; then
+			ip -6 rule add pref "$PREF_BLOCK" uidrange "$range" prohibit || return 1
+		else
+			ip rule add pref "$PREF_BLOCK" uidrange "$range" prohibit || return 1
+		fi
+	fi
+}
+
+case "${1:-}" in
+	start)
+		family_ensure 4 || { family_del 4; exit 1; }
+		family_ensure 6 || { family_del 6; family_del 4; exit 1; }
+		echo "WARP UID $uid isolated: IPv4/IPv6 main-table bypass + prohibit fallback"
+		;;
+	stop)
+		family_del 4
+		family_del 6
+		;;
+	status)
+		echo "WARP UID: $uid"
+		echo "--- IPv4 rules ---"
+		ip rule show | grep -E "uidrange $range" || true
+		echo "--- IPv6 rules ---"
+		ip -6 rule show | grep -E "uidrange $range" || true
+		echo "--- main table default routes (must be physical WAN) ---"
+		ip route show default table main
+		ip -6 route show default table main
+		;;
+	*)
+		echo "Usage: warp-route {start|stop|status}" >&2
+		exit 2
+		;;
+esac

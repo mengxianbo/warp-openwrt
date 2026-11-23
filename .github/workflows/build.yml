@@ -2,6 +2,8 @@ name: Build WARP MASQUE IPK
 
 on:
   push:
+    branches: [main, feature/warp-routing-isolation]
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -31,6 +33,12 @@ jobs:
           git clone --depth 1 --branch v3.0.1 https://github.com/Diniboy1123/usque.git /tmp/usque-src
           cd /tmp/usque-src
           go build -trimpath -ldflags="-s -w" -o "$GITHUB_WORKSPACE/usque" .
+
+      - name: Shell syntax checks
+        run: |
+          sh -n files/usr/bin/warpctl
+          sh -n files/usr/bin/warp-route
+          sh -n files/etc/init.d/warp
 
       - name: Package IPK
         run: |

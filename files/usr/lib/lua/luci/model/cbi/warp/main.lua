@@ -22,7 +22,7 @@ end
 
 local m = Map("warp",
 	translate("Cloudflare WARP MASQUE 代理"),
-	translate("基于 MASQUE / Connect-IP 协议的 WARP 代理。此插件不使用 WireGuard。首次使用请先注册设备。"))
+	translate("基于 MASQUE / Connect-IP 协议的 WARP 代理。使用专用系统用户和 IPv4/IPv6 策略路由隔离其他代理；main 路由表无路由时阻断，避免代理回环。main 默认路由应指向物理 WAN。首次使用请先注册设备。"))
 
 local s = m:section(NamedSection, "main", "warp", translate("基本设置"))
 s.addremove = false
@@ -49,6 +49,10 @@ user.rmempty = true
 local pass = s:option(Value, "password", translate("代理密码（可选）"))
 pass.password = true
 pass.rmempty = true
+
+local isolation = s:option(DummyValue, "_isolation", translate("代理隔离"))
+isolation.rawhtml = false
+isolation.default = translate("WARP 使用独立 UID warp；策略优先级 90 走 main 表，优先级 91 在 main 无路由时阻断。查看详情：warpctl status")
 
 local reg = s:option(Button, "_register", translate("注册 WARP 设备"))
 reg.inputtitle = translate("注册 WARP 设备")
