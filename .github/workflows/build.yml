@@ -36,7 +36,7 @@ jobs:
         run: |
           set -eux
           chmod 0755 usque
-          ./scripts/build-ipk.sh
+          sh ./scripts/build-ipk.sh
           mkdir -p dist
           mv ./*.ipk dist/
 
