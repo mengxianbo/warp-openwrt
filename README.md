@@ -42,7 +42,7 @@ echo
 echo "===== 2. 下载 Build #20 基础修复版 ====="
 cd /tmp
 wget -O warp-masque_1.0.1-1_x86_64.ipk \
-  https://github.com/mengxianbo/warp-openwrt/releases/download/build-50/warp-masque_1.0.1-1_x86_64.ipk
+  https://github.com/mengxianbo/warp-openwrt/releases/download/build-66/warp-masque_1.0.1-1_x86_64.ipk
 
 echo
 echo "===== 3. 检查安装包 ====="
@@ -126,7 +126,7 @@ set -e
 cd /tmp
 
 wget -O warp-masque_1.0.1-1_x86_64.ipk \
-  https://github.com/mengxianbo/warp-openwrt/releases/download/build-50/warp-masque_1.0.1-1_x86_64.ipk
+  https://github.com/mengxianbo/warp-openwrt/releases/download/build-66/warp-masque_1.0.1-1_x86_64.ipk
 
 opkg install --force-reinstall /tmp/warp-masque_1.0.1-1_x86_64.ipk
 
