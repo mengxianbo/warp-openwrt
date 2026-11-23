@@ -50,4 +50,4 @@ printf '2.0\n' > "$ROOT/build/debian-binary"
   cd "$ROOT/build"
   ar r "$ROOT/$PKG"_"$VERSION-1"_"$ARCH".ipk debian-binary control.tar.gz data.tar.gz
 )
-echo "Created $ROOT/$PKG"_"$VERSION-1"_"$ARCH".ipk"
+echo "Created ${ROOT}/${PKG}_${VERSION}-1_${ARCH}.ipk"
