@@ -31,7 +31,8 @@ opkg install \
     curl \
     wget \
     tar \
-    gzip
+    gzip \
+    ip-full
 
 # 3. 下载最新版 WARP MASQUE 安装包
 cd /tmp
