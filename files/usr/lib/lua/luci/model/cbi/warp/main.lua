@@ -1,4 +1,5 @@
 local sys = require "luci.sys"
+local fs = require "nixio.fs"
 
 -- Compatibility guard for LuCI CBI renderers which may call an option
 -- without forwarding its section identifier. AbstractValue instances retain
@@ -18,6 +19,22 @@ function AbstractValue.cbid(self, section)
 	end
 
 	return original_cbid(self, section)
+end
+
+local register_log = "/tmp/warp-register.log"
+local config_file = "/etc/usque/config.json"
+
+local function read_register_log()
+	local f = io.open(register_log, "r")
+	if not f then
+		return translate("尚无注册日志。请点击“注册 WARP 设备”开始注册。")
+	end
+	local content = f:read("*a") or ""
+	f:close()
+	if content == "" then
+		return translate("注册日志为空。")
+	end
+	return content
 end
 
 local m = Map("warp",
@@ -54,18 +71,37 @@ local isolation = s:option(DummyValue, "_isolation", translate("代理隔离"))
 isolation.rawhtml = false
 isolation.default = translate("WARP 使用独立 UID warp；策略优先级 90 走 main 表，优先级 91 在 main 无路由时阻断。查看详情：warpctl status")
 
+local reg_state = s:option(DummyValue, "_register_state", translate("WARP 注册状态"))
+reg_state.rawhtml = false
+if fs.access(config_file) then
+	reg_state.default = translate("已检测到注册配置。重复点击注册不会创建新设备。")
+else
+	reg_state.default = translate("尚未注册。点击下方按钮开始注册。")
+end
+
 local reg = s:option(Button, "_register", translate("注册 WARP 设备"))
 reg.inputtitle = translate("注册 WARP 设备")
-reg.inputstyle = "apply"
+reg.inputstyle = "reload"
 function reg.write(self, section)
-	sys.call("mkdir -p /etc/usque; chmod 700 /etc/usque; /usr/bin/warpctl register >/tmp/warp-register.log 2>&1 &")
+	-- This is a synchronous CBI action: wait for usque to finish so the page
+	-- reloads with the actual result rather than leaving an orphaned prompt.
+	local rc = sys.call("/usr/bin/warpctl register >" .. register_log .. " 2>&1")
+	local f = io.open(register_log, "a")
+	if f then
+		f:write("\nLuCI 注册操作退出码：", tostring(rc), "\n")
+		f:close()
+	end
 end
+
+local register_log_view = s:option(DummyValue, "_register_log", translate("注册结果 / 错误详情"))
+register_log_view.rawhtml = false
+register_log_view.default = read_register_log()
 
 local enroll = s:option(Button, "_enroll", translate("重新注册 MASQUE 密钥"))
 enroll.inputtitle = translate("重新注册")
 enroll.inputstyle = "reload"
 function enroll.write(self, section)
-	sys.call("/usr/bin/warpctl enroll >/tmp/warp-enroll.log 2>&1 &")
+	sys.call("/usr/bin/warpctl enroll >/tmp/warp-enroll.log 2>&1")
 end
 
 local start = s:option(Button, "_start", translate("启动代理"))
@@ -81,9 +117,5 @@ stop.inputstyle = "reset"
 function stop.write(self, section)
 	sys.call("/usr/bin/warpctl stop")
 end
-
-local log = s:option(DummyValue, "_log", translate("注册日志（/tmp/warp-register.log）"))
-log.rawhtml = false
-log.default = translate("注册后可通过 SSH 查看：cat /tmp/warp-register.log")
 
 return m
