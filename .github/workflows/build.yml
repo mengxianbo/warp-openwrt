@@ -106,7 +106,8 @@ jobs:
             go-dependency-licenses/**/COPYING*
             go-dependency-licenses/**/NOTICE*
 
-          tar -xOf data.tar.gz ./usr/share/licenses/warp-masque/go-dependencies/GO_DEPENDENCY_LICENSES.csv | test -s /dev/stdin
+          tar -xOf data.tar.gz ./usr/share/licenses/warp-masque/go-dependencies/GO_DEPENDENCY_LICENSES.csv > /tmp/go-dependency-licenses.csv
+          test -s /tmp/go-dependency-licenses.csv
           test -s "$GITHUB_WORKSPACE/usque"
 
       - name: Upload IPK artifact
