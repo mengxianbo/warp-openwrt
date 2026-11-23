@@ -46,6 +46,5 @@ EOF
   tar --numeric-owner --owner=0 --group=0 -czf "$ROOT/build/data.tar.gz" .
 )
 printf '2.0\n' > "$ROOT/build/debian-binary"
-tar -czf "$ROOT/${PKG}_${VERSION}-1_${ARCH}.ipk" -C "$ROOT/build" \\
-  ./debian-binary ./control.tar.gz ./data.tar.gz
+tar -czf "$ROOT/${PKG}_${VERSION}-1_${ARCH}.ipk" -C "$ROOT/build" ./debian-binary ./control.tar.gz ./data.tar.gz
 echo "Created ${ROOT}/${PKG}_${VERSION}-1_${ARCH}.ipk"
