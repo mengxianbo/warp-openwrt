@@ -1,9 +1,7 @@
 local sys = require "luci.sys"
+local fs = require "nixio.fs"
 
--- Compatibility guard for LuCI CBI renderers which may call an option
--- without forwarding its section identifier. AbstractValue instances retain
--- their owning section in self.section; NamedSection retains the UCI name in
--- its own .section field.
+-- Compatibility guard retained from the Build #20 baseline.
 local original_cbid = AbstractValue.cbid
 function AbstractValue.cbid(self, section)
 	if section == nil then
@@ -18,6 +16,23 @@ function AbstractValue.cbid(self, section)
 	end
 
 	return original_cbid(self, section)
+end
+
+local CONFIG = "/etc/usque/config.json"
+local REGISTER_LOG = "/tmp/warp-register.log"
+local ENROLL_LOG = "/tmp/warp-enroll.log"
+
+local function read_file(path, fallback)
+	local f = io.open(path, "r")
+	if not f then
+		return fallback
+	end
+	local value = f:read("*a") or ""
+	f:close()
+	if value == "" then
+		return fallback
+	end
+	return value
 end
 
 local m = Map("warp",
@@ -50,18 +65,39 @@ local pass = s:option(Value, "password", translate("代理密码（可选）"))
 pass.password = true
 pass.rmempty = true
 
+local reg_state = s:option(DummyValue, "_register_state", translate("WARP 注册状态"))
+reg_state.rawhtml = false
+function reg_state.cfgvalue(self, section)
+	if fs.stat(CONFIG) and fs.stat(CONFIG).size and fs.stat(CONFIG).size > 0 then
+		return translate("已注册：检测到设备配置。重复点击注册不会创建新设备。")
+	end
+	return translate("尚未注册：请点击“注册 WARP 设备”。")
+end
+
 local reg = s:option(Button, "_register", translate("注册 WARP 设备"))
 reg.inputtitle = translate("注册 WARP 设备")
 reg.inputstyle = "apply"
 function reg.write(self, section)
-	sys.call("mkdir -p /etc/usque; chmod 700 /etc/usque; /usr/bin/warpctl register >/tmp/warp-register.log 2>&1 &")
+	-- Run synchronously: wait for usque to finish and retain stdout/stderr.
+	local rc = sys.call("/usr/bin/warpctl register >" .. REGISTER_LOG .. " 2>&1")
+	local f = io.open(REGISTER_LOG, "a")
+	if f then
+		f:write("\nLuCI 注册操作退出码：", tostring(rc), "\n")
+		f:close()
+	end
+end
+
+local result = s:option(DummyValue, "_register_result", translate("注册结果 / 错误详情"))
+result.rawhtml = false
+function result.cfgvalue(self, section)
+	return read_file(REGISTER_LOG, translate("尚无注册记录。请点击“注册 WARP 设备”开始注册。"))
 end
 
 local enroll = s:option(Button, "_enroll", translate("重新注册 MASQUE 密钥"))
 enroll.inputtitle = translate("重新注册")
 enroll.inputstyle = "reload"
 function enroll.write(self, section)
-	sys.call("/usr/bin/warpctl enroll >/tmp/warp-enroll.log 2>&1 &")
+	sys.call("/usr/bin/warpctl enroll >" .. ENROLL_LOG .. " 2>&1")
 end
 
 local start = s:option(Button, "_start", translate("启动代理"))
@@ -77,9 +113,5 @@ stop.inputstyle = "reset"
 function stop.write(self, section)
 	sys.call("/usr/bin/warpctl stop")
 end
-
-local log = s:option(DummyValue, "_log", translate("注册日志（/tmp/warp-register.log）"))
-log.rawhtml = false
-log.default = translate("注册后可通过 SSH 查看：cat /tmp/warp-register.log")
 
 return m
