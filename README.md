@@ -19,50 +19,47 @@ The package embeds a statically linked Go `usque` binary. SOCKS5 and HTTP proxy 
 
 ## Install or upgrade
 
-The following commands download and install the current published package (Build 17). Run them in the OpenWrt router SSH shell as `root`.
+# 1. 更新软件包索引
+opkg update
 
-```sh
-set -e
+# 2. 安装 LuCI 运行依赖
+opkg install \
+    luci-base \
+    luci-compat \
+    ca-bundle \
+    curl \
+    wget \
+    tar \
+    gzip
 
+# 3. 下载最新版 WARP MASQUE IPK
 cd /tmp
 
-echo "===== 1. Download WARP MASQUE IPK ====="
 wget -O warp-masque_1.0.0-1_x86_64.ipk \
-  "https://github.com/mengxianbo/warp-openwrt/releases/download/build-17/warp-masque_1.0.0-1_x86_64.ipk"
+"https://github.com/mengxianbo/warp-openwrt/releases/download/build-20/warp-masque_1.0.0-1_x86_64.ipk"
 
-echo
-echo "===== 2. Check downloaded package ====="
+# 4. 检查安装包
 ls -lh /tmp/warp-masque_1.0.0-1_x86_64.ipk
 file /tmp/warp-masque_1.0.0-1_x86_64.ipk
 
-echo
-echo "===== 3. Install / force upgrade ====="
-opkg install --force-reinstall /tmp/warp-masque_1.0.0-1_x86_64.ipk
+# 5. 安装或覆盖旧版本
+opkg install --force-reinstall \
+/tmp/warp-masque_1.0.0-1_x86_64.ipk
 
-echo
-echo "===== 4. Clear LuCI cache ====="
+# 6. 清理 LuCI 缓存
 rm -f /tmp/luci-indexcache
-rm -f /tmp/luci-modulecache/* 2>/dev/null || true
+rm -f /tmp/luci-modulecache/* 2>/dev/null
 
-echo
-echo "===== 5. Restart LuCI web server ====="
+# 7. 重启 Web 服务
 /etc/init.d/uhttpd restart
 
+# 8. 检查安装结果
+echo "===== WARP MASQUE 安装检查 ====="
+opkg list-installed | grep -i warp
 echo
-echo "===== 6. Check WARP configuration ====="
-uci show warp
-
+ls -lh /usr/bin/warpctl /usr/bin/usque 2>/dev/null
 echo
-echo "===== 7. Check installed binaries ====="
-ls -lh /usr/bin/warpctl /usr/bin/usque
-
-echo
-echo "Installation completed."
-```
-
-Package download: [warp-masque_1.0.0-1_x86_64.ipk](https://github.com/mengxianbo/warp-openwrt/releases/download/build-17/warp-masque_1.0.0-1_x86_64.ipk)  
-Release history: [GitHub Releases](https://github.com/mengxianbo/warp-openwrt/releases)
-
+uci show warp 2>/dev/null
 > This package is built for x86_64. Do not install it on a different CPU architecture.
 
 ### Important when upgrading an existing installation
