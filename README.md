@@ -11,7 +11,7 @@
 - HTTP CONNECT 代理默认监听：`0.0.0.0:32511`
 - 提供中文 LuCI 管理界面
 - 可在 LuCI 界面自定义监听地址、SOCKS5 端口和 HTTP 端口
-- 通过 GitHub Actions 自动编译 IPK 安装包并发布版本
+- WARP MASQUE 进程使用专用系统 UID，与 PassWall / OpenClash 等代理隔离\n- 通过 IPv4/IPv6 策略路由优先走 main 路由表，绕过常见代理策略标记\n- main 路由表无可用路由时使用 prohibit 规则阻断，防止回落到其他代理形成回环\n- 通过 GitHub Actions 自动编译 IPK 安装包并发布版本
 
 安装包内置静态编译的 Go 语言 usque 程序。SOCKS5 和 HTTP 代理分别由 procd 服务管理，共用同一份 MASQUE 注册配置。
 
@@ -36,8 +36,8 @@ opkg install \
 # 3. 下载最新版 WARP MASQUE 安装包
 cd /tmp
 
-wget -O warp-masque_1.0.0-1_x86_64.ipk \
-"https://github.com/mengxianbo/warp-openwrt/releases/download/build-25/warp-masque_1.0.0-1_x86_64.ipk"
+wget -O warp-masque_1.1.0-1_x86_64.ipk \
+"https://github.com/mengxianbo/warp-openwrt/releases/latest/download/warp-masque_1.1.0-1_x86_64.ipk"
 
 # 4. 检查安装包
 ls -lh /tmp/warp-masque_1.0.0-1_x86_64.ipk
@@ -116,6 +116,28 @@ warpctl status
 
 Cloudflare 可能对设备注册进行频率限制。如果已经存在有效的 `/etc/usque/config.json`，请勿反复注册。
 
+## 与 PassWall / OpenClash 等其他代理共存
+
+从 1.1.0 开始，WARP 的两个 usque 代理进程以独立的系统用户 `warp` 运行，不再与其他 root 代理进程共用 UID。服务启动时会为该 UID 安装 IPv4 和 IPv6 策略规则：
+
+- 优先级 90：WARP 用户流量查询 `main` 路由表，避开常见基于 fwmark 的 PassWall / OpenClash / PBR 规则。
+- 优先级 91：如果 `main` 表没有匹配路由，则执行 `prohibit`，不允许继续落入后续代理规则，避免回环。
+- 停止 WARP 服务时，只清理本插件为 UID `warp` 创建的规则，不清理其他代理的路由或防火墙规则。
+- 如果优先级 90 或 91 已被其他规则占用，插件会拒绝启动，不覆盖已有规则。
+
+**重要限制：** 该插件提供的是本机 SOCKS5 / HTTP CONNECT 代理，不创建 WARP TUN，也不接管全局默认路由。WARP MASQUE 的外层连接会使用 `main` 表。因此，OpenWrt 的 `main` 表默认路由必须指向物理 WAN；如果你把 `main` 默认路由本身改成了另一个 VPN/TUN，WARP 外层连接也会跟随该路由。此隔离方案不修改其他代理的配置，也不能替代对 WAN 默认路由的检查。
+
+查看隔离状态：
+
+```sh
+warpctl status
+/usr/bin/warp-route status
+ip rule show
+ip -6 rule show
+```
+
+如果路由器缺少支持 `uidrange` 选择器的 iproute2，或策略规则安装失败，WARP 服务会拒绝启动，而不是在没有隔离保护的情况下运行。
+
 ## 局域网设备使用代理
 
 在需要使用代理的局域网设备上，将代理服务器地址设置为 OpenWrt 路由器的局域网 IP 地址：
@@ -129,7 +151,7 @@ Cloudflare 可能对设备注册进行频率限制。如果已经存在有效的
 
 ## 通过 SSH 管理服务
 
-启动、查看状态和停止服务：
+启动、查看状态和停止服务（启动时自动安装隔离规则，停止时清理本插件规则）：
 
 ```sh
 warpctl start
