@@ -2,7 +2,7 @@ local fs = require "nixio.fs"
 local sys = require "luci.sys"
 local uci = require "luci.model.uci".cursor()
 
-m = Map("warp", translate("Cloudflare WARP MASQUE"), translate("基于 MASQUE / Connect-IP 协议的 WARP 代理。此插件不使用 WireGuard。首次使用请先注册设备。"))
+m = Map("warp", translate("Cloudflare WARP MASQUE 代理"), translate("基于 MASQUE / Connect-IP 协议的 WARP 代理。此插件不使用 WireGuard。首次使用请先注册设备。"))
 s = m:section(NamedSection, "main", "warp", translate("基本设置"))
 s.addremove = false
 
@@ -12,13 +12,13 @@ enabled.rmempty = false
 
 bind = s:option(Value, "bind", translate("监听地址"))
 bind.default = "0.0.0.0"
-bind.description = translate("默认监听所有接口，建议仅在可信 LAN 使用，并保持 WAN 入站防火墙关闭。")
+bind.description = translate("默认监听所有接口供局域网设备使用。请保持 WAN 入站防火墙关闭，不要将无加密代理端口暴露到公网。")
 
-socks = s:option(Value, "socks_port", translate("SOCKS5 端口"))
+socks = s:option(Value, "socks_port", translate("SOCKS5 代理端口"))
 socks.datatype = "port"
 socks.default = "32500"
 
-http = s:option(Value, "http_port", translate("HTTP 代理端口"))
+http = s:option(Value, "http_port", translate("HTTP CONNECT 代理端口"))
 http.datatype = "port"
 http.default = "32511"
 
@@ -37,21 +37,21 @@ function reg.write(self, section)
 	sys.call("mkdir -p /etc/usque; chmod 700 /etc/usque; /usr/bin/warpctl register >/tmp/warp-register.log 2>&1 &")
 end
 
-enroll = status:option(Button, "_enroll", translate("重新进行 MASQUE Enroll"))
-enroll.inputtitle = translate("重新 Enroll")
+enroll = status:option(Button, "_enroll", translate("重新注册 MASQUE 密钥"))
+enroll.inputtitle = translate("重新注册")
 enroll.inputstyle = "reload"
 function enroll.write(self, section)
 	sys.call("/usr/bin/warpctl enroll >/tmp/warp-enroll.log 2>&1 &")
 end
 
-start = status:option(Button, "_start", translate("启动服务"))
+start = status:option(Button, "_start", translate("启动代理"))
 start.inputtitle = translate("启动")
 start.inputstyle = "apply"
 function start.write(self, section)
 	sys.call("/usr/bin/warpctl start >/tmp/warp-start.log 2>&1")
 end
 
-stop = status:option(Button, "_stop", translate("停止服务"))
+stop = status:option(Button, "_stop", translate("停止代理"))
 stop.inputtitle = translate("停止")
 stop.inputstyle = "reset"
 function stop.write(self, section)
@@ -60,6 +60,6 @@ end
 
 log = status:option(DummyValue, "_log", translate("注册日志（/tmp/warp-register.log）"))
 log.rawhtml = false
-log.default = translate("注册后可通过 SSH 执行：cat /tmp/warp-register.log")
+log.default = translate("注册后可通过 SSH 查看：cat /tmp/warp-register.log")
 
 return m
