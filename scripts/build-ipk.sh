@@ -27,7 +27,7 @@ install -m 0644 "$ROOT/files/usr/share/rpcd/acl.d/luci-app-warp.json" "$STAGE/us
 cat > "$CONTROL/control" <<EOF
 Package: $PKG
 Version: $VERSION-1
-Depends: libc, luci-base, luci-compat, ca-bundle
+Depends: libc, luci-base, luci-compat, ca-bundle, ip-full
 Architecture: $ARCH
 Section: net
 Priority: optional
