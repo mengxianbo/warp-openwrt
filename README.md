@@ -66,3 +66,7 @@ Push to `main` or manually run **Actions → Build WARP MASQUE IPK**. The workfl
 - SOCKS5 and HTTP proxy traffic between LAN clients and the router is not encrypted by these proxy protocols. Use only on trusted LANs or enable proxy authentication.
 - Cloudflare account registration, availability, throughput and policy are controlled by Cloudflare.
 - Upstream project/license: [Diniboy1123/usque](https://github.com/Diniboy1123/usque), MIT.
+
+### IPK packaging
+
+Release packages use the native OpenWrt gzip-compressed tar container (`debian-binary`, `control.tar.gz`, and `data.tar.gz`), not a Debian `ar` archive. The CI workflow verifies the outer package structure before publishing.
