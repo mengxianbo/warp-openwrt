@@ -1,5 +1,7 @@
 # WARP MASQUE for OpenWrt
 
+[简体中文文档](README.zh-CN.md)
+
 OpenWrt LuCI package for Cloudflare WARP **MASQUE / Connect-IP** using [usque](https://github.com/Diniboy1123/usque). This project does not include WireGuard.
 
 ## Target and features
