@@ -41,7 +41,7 @@ wget -O warp-masque_1.1.0-1_x86_64.ipk \
 "https://github.com/mengxianbo/warp-openwrt/releases/latest/download/warp-masque_1.1.0-1_x86_64.ipk"
 
 # 4. 检查安装包
-ls -lh /tmp/warp-masque_1.0.0-1_x86_64.ipk
+ls -lh /tmp/warp-masque_1.1.0-1_x86_64.ipk
 file /tmp/warp-masque_1.0.0-1_x86_64.ipk
 
 # 5. 安装或覆盖旧版本
