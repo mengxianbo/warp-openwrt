@@ -28,15 +28,20 @@ install -m 0644 "$ROOT/files/usr/share/rpcd/acl.d/luci-app-warp.json" "$STAGE/us
 test -s "$ROOT/LICENSE" || { echo "project LICENSE missing" >&2; exit 1; }
 test -s "$ROOT/LICENSES/usque-MIT.txt" || { echo "usque license missing" >&2; exit 1; }
 test -s "$ROOT/THIRD_PARTY_NOTICES.md" || { echo "third-party notices missing" >&2; exit 1; }
+test -s "$ROOT/go-dependency-licenses/GO_DEPENDENCY_LICENSES.csv" || { echo "Go dependency license report missing" >&2; exit 1; }
+test -d "$ROOT/go-dependency-licenses" || { echo "Go dependency license directory missing" >&2; exit 1; }
 install -m 0644 "$ROOT/LICENSE" "$STAGE/usr/share/licenses/$PKG/LICENSE"
 install -m 0644 "$ROOT/LICENSES/usque-MIT.txt" "$STAGE/usr/share/licenses/$PKG/usque-MIT.txt"
 install -m 0644 "$ROOT/THIRD_PARTY_NOTICES.md" "$STAGE/usr/share/licenses/$PKG/THIRD_PARTY_NOTICES.md"
+mkdir -p "$STAGE/usr/share/licenses/$PKG/go-dependencies"
+cp -R "$ROOT/go-dependency-licenses/." "$STAGE/usr/share/licenses/$PKG/go-dependencies/"
 
 cat > "$CONTROL/control" <<EOF
 Package: $PKG
 Version: $VERSION-1
 Depends: libc, luci-base, luci-compat, ca-bundle, ip-full
 Architecture: $ARCH
+License: MIT
 Section: net
 Priority: optional
 Maintainer: mengxianbo
