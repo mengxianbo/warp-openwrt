@@ -15,15 +15,66 @@
 
 安装包内置静态编译的 Go 语言 usque 程序。SOCKS5 和 HTTP 代理分别由 procd 服务管理，共用同一份 MASQUE 注册配置。
 
-## 安装或升级
+## 完整安装或升级（OpenWrt x86_64）
 
-请通过 SSH 登录 OpenWrt，并使用 root 账户执行以下命令。
+当前已验证的正式安装包为 **build-25 / warp-masque 1.0.0-1**，适用于 OpenWrt 23.05.5 x86_64。此版本固定下载地址和 SHA256，避免 `latest` 指向其他版本时出现文件名或校验值不匹配。
+
+> **重要版本说明：** build-25 安装包是 `1.0.0-1`。它提供本机 SOCKS5 和 HTTP CONNECT 代理，但**不包含 1.1.0 的独立 warp UID 与 IPv4/IPv6 策略路由隔离功能**。如果需要后者，请先确认仓库已发布并验证对应的 1.1.0 IPK，不要把 build-25 当作 1.1.0 安装。
+
+### 适用条件
+
+- OpenWrt 23.05.5，设备架构为 x86_64。
+- 通过 SSH 登录路由器，并使用 root 账户执行。
+- 路由器能够访问 GitHub 下载地址。
+- 不适用于 ARM、ARM64、MIPS 等其他架构。
+
+### 一键安装 / 覆盖安装命令
+
+下面脚本会检查设备架构、备份已有配置、停止旧服务、安装依赖、下载并校验 IPK，然后安装插件。已有的 WARP 注册文件会被备份并恢复，不会主动重新注册设备。
+
+将整段复制到 OpenWrt SSH 终端执行：
 
 ```sh
-# 1. 更新软件包索引
-opkg update
+cat > /tmp/install-warp-masque.sh <<'EOF'
+#!/bin/sh
+set -eu
 
-# 2. 安装 LuCI 运行依赖
+PKG="warp-masque_1.0.0-1_x86_64.ipk"
+URL="https://github.com/mengxianbo/warp-openwrt/releases/download/build-25/warp-masque_1.0.0-1_x86_64.ipk"
+SHA256="6c3c805eab776870f7ebd8279c6c831dd76cd98e84300660369acb2500d5460a"
+BACKUP="/root/warp-backup"
+
+echo "===== 1. 检查系统架构 ====="
+ARCH="$(uname -m)"
+echo "当前架构：$ARCH"
+[ "$ARCH" = "x86_64" ] || {
+    echo "错误：此 IPK 仅适用于 x86_64，已停止。"
+    exit 1
+}
+
+echo "===== 2. 备份已有配置 ====="
+mkdir -p "$BACKUP"
+chmod 700 "$BACKUP"
+
+if [ -f /etc/usque/config.json ]; then
+    cp -p /etc/usque/config.json "$BACKUP/config.json"
+    chmod 600 "$BACKUP/config.json"
+    echo "已备份 WARP 注册文件。"
+fi
+
+if [ -f /etc/config/warp ]; then
+    cp -p /etc/config/warp "$BACKUP/warp"
+    echo "已备份 UCI 配置。"
+fi
+
+echo "===== 3. 停止旧版服务（如正在运行） ====="
+if command -v warpctl >/dev/null 2>&1; then
+    warpctl stop || true
+fi
+/etc/init.d/warp stop 2>/dev/null || true
+
+echo "===== 4. 更新软件包索引并安装依赖 ====="
+opkg update
 opkg install \
     luci-base \
     luci-compat \
@@ -34,44 +85,71 @@ opkg install \
     gzip \
     ip-full
 
-# 3. 下载最新版 WARP MASQUE 安装包
+echo "===== 5. 下载 build-25 安装包 ====="
 cd /tmp
+rm -f "$PKG"
+wget -O "$PKG" "$URL"
+[ -s "$PKG" ] || {
+    echo "错误：安装包下载失败或文件为空。"
+    exit 1
+}
 
-wget -O warp-masque_1.1.0-1_x86_64.ipk \
-"https://github.com/mengxianbo/warp-openwrt/releases/latest/download/warp-masque_1.1.0-1_x86_64.ipk"
+echo "===== 6. 校验 SHA256 ====="
+echo "$SHA256  /tmp/$PKG" | sha256sum -c -
 
-# 4. 检查安装包
-ls -lh /tmp/warp-masque_1.1.0-1_x86_64.ipk
-file /tmp/warp-masque_1.0.0-1_x86_64.ipk
+echo "===== 7. 安装插件 ====="
+opkg install --force-downgrade "/tmp/$PKG"
 
-# 5. 安装或覆盖旧版本
-opkg install --force-reinstall \
-/tmp/warp-masque_1.0.0-1_x86_64.ipk
+echo "===== 8. 恢复原有配置 ====="
+if [ -f "$BACKUP/config.json" ]; then
+    mkdir -p /etc/usque
+    cp -p "$BACKUP/config.json" /etc/usque/config.json
+    chmod 600 /etc/usque/config.json
+fi
 
-# 6. 清理 LuCI 缓存
+if [ -f "$BACKUP/warp" ]; then
+    cp -p "$BACKUP/warp" /etc/config/warp
+fi
+
+echo "===== 9. 清理 LuCI 缓存并重启 Web 服务 ====="
 rm -f /tmp/luci-indexcache
-rm -f /tmp/luci-modulecache/* 2>/dev/null
-
-# 7. 重启 Web 服务
+rm -f /tmp/luci-modulecache/* 2>/dev/null || true
 /etc/init.d/uhttpd restart
 
-# 8. 检查安装结果
-echo "===== WARP MASQUE 安装检查 ====="
-opkg list-installed | grep -i warp
+echo "===== 10. 检查安装结果 ====="
+opkg status warp-masque
 echo
-ls -lh /usr/bin/warpctl /usr/bin/usque 2>/dev/null
+ls -l /usr/bin/warpctl /usr/bin/usque 2>/dev/null || true
 echo
-uci show warp 2>/dev/null
+echo "安装完成。首次安装请按 README 的“首次注册 WARP 设备”章节注册；已有注册文件不要重复注册。"
+EOF
+
+chmod +x /tmp/install-warp-masque.sh
+/tmp/install-warp-masque.sh
 ```
 
-> **注意：** 此安装包仅适用于 x86_64 架构，请勿安装到其他处理器架构的设备。
+### 安装命令说明
 
-### 已安装设备升级注意事项
+| 步骤 | 作用 |
+|---|---|
+| 架构检查 | 防止把 x86_64 安装包装到其他平台 |
+| 配置备份 | 备份 `/etc/usque/config.json` 和 `/etc/config/warp` |
+| 停止服务 | 避免升级时旧进程占用资源 |
+| 安装依赖 | 安装 LuCI、证书、下载工具和 IP 路由工具 |
+| 下载与校验 | 固定下载 build-25，并用 SHA256 验证文件完整性 |
+| 安装 IPK | 使用 `--force-downgrade` 允许覆盖较新版本 |
+| 恢复配置 | 保留原有设备注册信息和 UCI 设置 |
+| 重启 Web | 清理 LuCI 缓存并重启管理页面服务 |
 
-- 上述命令会重新安装插件文件，正常升级不需要重新注册 WARP 设备。
-- 请保留现有的 `/etc/usque/config.json` 注册文件。**不要删除 `/etc/usque` 目录，也不要仅仅为了升级而重新注册。**
-- 如果此前修改过插件配置，升级后请使用 `uci show warp` 检查配置。
-- 建议妥善备份 `/etc/usque/config.json`。该文件包含设备和账户凭据，请勿公开发布或发送给他人。
+SHA256：`6c3c805eab776870f7ebd8279c6c831dd76cd98e84300660369acb2500d5460a`
+
+### 首次安装与已有设备的区别
+
+- **首次安装：** 如果没有 `/etc/usque/config.json`，安装完成后需要注册一次 WARP 设备。
+- **已经注册过：** 保留 `/etc/usque/config.json` 即可，升级时不要删除该文件，也不要为了升级反复执行注册。
+- **从 1.1.0 降级到 build-25：** 上述命令会使用 `--force-downgrade`。降级后 1.1.0 的独立 UID / 策略路由隔离功能不再适用；建议检查并清理仅由旧版插件创建的规则，避免遗留规则影响网络。不要手动删除其他代理创建的规则。
+
+注册文件包含设备和账户凭据。备份目录为 root 私有目录，请勿公开分享 `/root/warp-backup/config.json`。
 
 ## 打开 LuCI 管理页面
 
