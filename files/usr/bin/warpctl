@@ -1,0 +1,49 @@
+#!/bin/sh
+set -eu
+CONFIG=/etc/usque/config.json
+case "${1:-}" in
+  register)
+    mkdir -p /etc/usque
+    chmod 0700 /etc/usque
+    if [ -s "$CONFIG" ]; then
+      echo "已有注册配置：$CONFIG"
+      echo "如需重新注册，请先备份后手动移走该文件。"
+      exit 1
+    fi
+    echo "正在向 Cloudflare 注册 WARP MASQUE 设备……"
+    /usr/bin/usque -c "$CONFIG" register -n OpenWrt-WARP
+    [ -s "$CONFIG" ] && chmod 0600 "$CONFIG"
+    ;;
+  enroll)
+    [ -s "$CONFIG" ] || { echo "尚未注册，请先执行 warpctl register"; exit 1; }
+    /usr/bin/usque -c "$CONFIG" enroll
+    chmod 0600 "$CONFIG"
+    ;;
+  start)
+    [ -s "$CONFIG" ] || { echo "尚未注册，请先执行 warpctl register"; exit 1; }
+    uci set warp.main.enabled='1'
+    uci commit warp
+    /etc/init.d/warp enable
+    /etc/init.d/warp restart
+    ;;
+  stop)
+    /etc/init.d/warp stop
+    ;;
+  restart)
+    /etc/init.d/warp restart
+    ;;
+  status)
+    echo "=== WARP MASQUE ==="
+    uci show warp.main 2>/dev/null || true
+    if [ -s "$CONFIG" ]; then echo "注册配置：已存在"; else echo "注册配置：未注册"; fi
+    echo "SOCKS5 进程：$(pgrep -af 'usque.*socks' || true)"
+    echo "HTTP 进程：$(pgrep -af 'usque.*http-proxy' || true)"
+    ;;
+  log)
+    logread -e usque
+    ;;
+  *)
+    echo "用法：warpctl {register|enroll|start|stop|restart|status|log}"
+    exit 2
+    ;;
+esac
