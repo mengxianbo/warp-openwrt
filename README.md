@@ -15,54 +15,56 @@
 
 安装包内置静态编译的 Go 语言 usque 程序。SOCKS5 和 HTTP 代理分别由 procd 服务管理，共用同一份 MASQUE 注册配置。
 
-## 全新安装 / 降级安装（OpenWrt x86_64）
+## 全新安装 / 升级安装（OpenWrt x86_64）
 
-当前提供的回退安装包为 **build-40 / warp-masque 1.0.0-1**，源码基线对应历史构建 #20。适用于 OpenWrt 23.05.5 x86_64。
-
-> **版本说明：** build-40 是回退到 #20 的 1.0.0-1 版本，提供本机 SOCKS5 和 HTTP CONNECT 代理。它不包含后续 1.1.x 版本的独立 `warp` 用户和 IPv4/IPv6 策略路由隔离功能。请勿将本安装包误认为包含回环隔离功能的新版。
-
-### 适用条件
-
-- OpenWrt 23.05.5，设备架构为 x86_64。
-- 使用 root 账户通过 SSH 登录路由器。
-- 路由器可以访问 GitHub。
+当前安装版本为 **warp-masque 1.1.2-1**，适用于 OpenWrt 23.05.5 x86_64。此版本修复了 LuCI 注册流程：用户主动点击注册后，后台自动确认 Cloudflare 服务条款、等待注册完成、刷新注册状态并显示详细日志；如果注册配置已经存在，则跳过注册，不会重复创建设备。
 
 ### 一键下载并安装
 
-将下面整段命令复制到 OpenWrt SSH 终端执行：
+通过 SSH 以 root 登录 OpenWrt，将下面整段命令复制执行：
 
 ```sh
-# 1. 检查设备架构
+set -e
+
+# 1. 检查 CPU 架构
 [ "$(uname -m)" = "x86_64" ] || {
-    echo "错误：此安装包仅适用于 x86_64"
+    echo "错误：此 IPK 仅适用于 x86_64"
     exit 1
 }
 
-# 2. 进入临时目录并下载 build-40（对应 #20 的 1.0.0-1）
+# 2. 下载当前最新的 1.1.2-1 安装包
 cd /tmp
-wget -O warp-masque_1.0.0-1_x86_64.ipk \
-  https://github.com/mengxianbo/warp-openwrt/releases/download/build-40/warp-masque_1.0.0-1_x86_64.ipk
+wget -O warp-masque_1.1.2-1_x86_64.ipk \
+  https://github.com/mengxianbo/warp-openwrt/releases/latest/download/warp-masque_1.1.2-1_x86_64.ipk
 
-# 3. 安装（允许从较新版本降级）
-opkg install --force-downgrade /tmp/warp-masque_1.0.0-1_x86_64.ipk
+# 3. 安装或升级插件
+opkg install --force-reinstall /tmp/warp-masque_1.1.2-1_x86_64.ipk
 
-# 4. 设置开机启动
+# 4. 设置开机启动并刷新 LuCI
 /etc/init.d/warp enable
+rm -f /tmp/luci-indexcache
+rm -f /tmp/luci-modulecache/* 2>/dev/null || true
+/etc/init.d/uhttpd restart
 
-# 5. 查看安装版本
-opkg status warp-masque
+# 5. 检查版本和注册状态
+opkg status warp-masque | grep -E 'Package|Version'
+warpctl status
 ```
 
-也可以直接打开 [build-40 发布页面](https://github.com/mengxianbo/warp-openwrt/releases/tag/build-40) 下载 IPK 后，通过 SCP / WinSCP 上传到路由器，再执行：
+安装包下载：[warp-masque_1.1.2-1_x86_64.ipk](https://github.com/mengxianbo/warp-openwrt/releases/latest/download/warp-masque_1.1.2-1_x86_64.ipk)  
+版本发布页：[GitHub Releases](https://github.com/mengxianbo/warp-openwrt/releases)
 
-```sh
-opkg install --force-downgrade /tmp/warp-masque_1.0.0-1_x86_64.ipk
-/etc/init.d/warp enable
-```
+### 首次注册 WARP 设备
 
-### 首次注册并启动
+仅当设备首次安装且不存在 `/etc/usque/config.json` 时才需要注册。
 
-全新安装后，先注册 WARP 设备，再启动服务：
+1. 打开 LuCI：**服务 → WARP MASQUE**。
+2. 点击 **注册 WARP 设备**。
+3. 插件只在本次主动注册操作中自动确认 Cloudflare 服务条款，并等待注册完成。
+4. 页面刷新后查看“WARP 注册状态”和“注册结果 / 错误详情”。
+5. 注册成功后点击“启动代理”。
+
+也可以通过 SSH 执行：
 
 ```sh
 warpctl register
@@ -70,13 +72,19 @@ warpctl start
 warpctl status
 ```
 
-如果设备之前已经注册，并且 `/etc/usque/config.json` 文件仍然存在，则不要重复注册，直接执行：
+`warpctl register` 已改为非交互式注册，会自动向 usque 提供服务条款确认输入。只有明确执行注册命令或点击 LuCI 注册按钮时才会触发，不会在插件安装、升级或启动时自动注册。
+
+### 已注册设备升级
+
+升级插件不会删除或覆盖现有的 `/etc/usque/config.json`。如果该文件已经存在，LuCI 注册按钮和 `warpctl register` 都会提示已存在并跳过注册。升级后直接执行：
 
 ```sh
 /etc/init.d/warp enable
 warpctl start
 warpctl status
 ```
+
+请勿为了升级插件而删除注册文件或重复注册。注册文件包含设备凭据，请勿公开分享。
 
 ### 默认代理端口
 
@@ -85,17 +93,7 @@ warpctl status
 | SOCKS5 | `0.0.0.0` | `32500` |
 | HTTP CONNECT | `0.0.0.0` | `32511` |
 
-安装后可在 LuCI 的 **服务 → WARP MASQUE** 页面管理服务，并按需修改监听地址和端口。
-
-### 安装注意事项
-
-- 本安装包是 x86_64 专用，不适用于 ARM、ARM64、MIPS 等架构。
-- `--force-downgrade` 允许从较新版本降级到 1.0.0-1。降级前建议备份 `/etc/config/warp` 和 `/etc/usque/config.json`。
-- WARP 注册文件包含设备凭据，请勿公开分享。
-- 1.0.0-1 不包含后续版本的独立 UID / 策略路由隔离机制；与 PassWall、OpenClash 等代理共存时，请自行确认路由策略，避免代理回环。
-- 不要将未设置认证的代理端口暴露到公网。
-
-**build-40 安装包：** [warp-masque_1.0.0-1_x86_64.ipk](https://github.com/mengxianbo/warp-openwrt/releases/download/build-40/warp-masque_1.0.0-1_x86_64.ipk)
+可以在 LuCI 页面自定义监听地址和端口。不要将未设置认证的代理端口暴露到公网。
 
 ## 打开 LuCI 管理页面
 
