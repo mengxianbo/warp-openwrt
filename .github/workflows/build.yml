@@ -66,26 +66,7 @@ jobs:
           grep -q "usr/share/licenses/warp-masque/usque-MIT.txt" /tmp/ipk-data-members.txt
           grep -q "usr/share/licenses/warp-masque/THIRD_PARTY_NOTICES.md" /tmp/ipk-data-members.txt
           tar -xOf control.tar.gz ./control | grep -E '^(Package|Version|Architecture|License):'
-          tar -xOf control.tar.gz ./control | grep -q '^License: MIT
-          test -s "$GITHUB_WORKSPACE/usque"
-
-      - name: Upload IPK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: warp-masque-openwrt-23.05.5-x86_64
-          path: dist/*.ipk
-          if-no-files-found: error
-          retention-days: 30
-
-      - name: Publish GitHub Release
-        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: build-${{ github.run_number }}
-          name: WARP MASQUE IPK build ${{ github.run_number }}
-          generate_release_notes: true
-          files: dist/*.ipk
-
+          tar -xOf control.tar.gz ./control | grep -q '^License: MIT$'
           test -s "$GITHUB_WORKSPACE/usque"
 
       - name: Upload IPK artifact
