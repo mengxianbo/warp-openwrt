@@ -19,49 +19,49 @@
 
 ## 安装或升级
 
-以下命令下载并安装当前已发布的 Build 17 版本。请在 OpenWrt 路由器 SSH 终端中以 `root` 身份执行。
+# 1. 更新软件包索引
+opkg update
 
-```sh
-set -e
+# 2. 安装 LuCI 运行依赖
+opkg install \
+    luci-base \
+    luci-compat \
+    ca-bundle \
+    curl \
+    wget \
+    tar \
+    gzip
 
+# 3. 下载最新版 WARP MASQUE IPK
 cd /tmp
 
-echo "===== 1. 下载 WARP MASQUE IPK ====="
 wget -O warp-masque_1.0.0-1_x86_64.ipk \
-  "https://github.com/mengxianbo/warp-openwrt/releases/download/build-17/warp-masque_1.0.0-1_x86_64.ipk"
+"https://github.com/mengxianbo/warp-openwrt/releases/download/build-20/warp-masque_1.0.0-1_x86_64.ipk"
 
-echo
-echo "===== 2. 检查安装包 ====="
+# 4. 检查安装包
 ls -lh /tmp/warp-masque_1.0.0-1_x86_64.ipk
 file /tmp/warp-masque_1.0.0-1_x86_64.ipk
 
-echo
-echo "===== 3. 安装 / 强制升级 ====="
-opkg install --force-reinstall /tmp/warp-masque_1.0.0-1_x86_64.ipk
+# 5. 安装或覆盖旧版本
+opkg install --force-reinstall \
+/tmp/warp-masque_1.0.0-1_x86_64.ipk
 
-echo
-echo "===== 4. 清理 LuCI 页面缓存 ====="
+# 6. 清理 LuCI 缓存
 rm -f /tmp/luci-indexcache
-rm -f /tmp/luci-modulecache/* 2>/dev/null || true
+rm -f /tmp/luci-modulecache/* 2>/dev/null
 
-echo
-echo "===== 5. 重启 LuCI Web 服务 ====="
+# 7. 重启 Web 服务
 /etc/init.d/uhttpd restart
 
+# 8. 检查安装结果
+echo "===== WARP MASQUE 安装检查 ====="
+opkg list-installed | grep -i warp
 echo
-echo "===== 6. 检查 WARP 配置 ====="
-uci show warp
-
+ls -lh /usr/bin/warpctl /usr/bin/usque 2>/dev/null
 echo
-echo "===== 7. 检查程序文件 ====="
-ls -lh /usr/bin/warpctl /usr/bin/usque
+uci show warp 2>/dev/null
 
-echo
-echo "安装完成。"
-```
 
-安装包下载：[warp-masque_1.0.0-1_x86_64.ipk](https://github.com/mengxianbo/warp-openwrt/releases/download/build-17/warp-masque_1.0.0-1_x86_64.ipk)  
-所有版本：[GitHub Releases](https://github.com/mengxianbo/warp-openwrt/releases)
 
 > 本安装包仅适用于 x86_64 架构，请勿安装到其他 CPU 架构的设备。
 
