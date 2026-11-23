@@ -1,5 +1,25 @@
 local sys = require "luci.sys"
 
+-- Compatibility guard for LuCI CBI renderers which may call an option
+-- without forwarding its section identifier. AbstractValue instances retain
+-- their owning section in self.section; NamedSection retains the UCI name in
+-- its own .section field.
+local original_cbid = AbstractValue.cbid
+function AbstractValue.cbid(self, section)
+	if section == nil then
+		local parent = self.section
+		if type(parent) == "table" then
+			section = parent.section
+		end
+	end
+
+	if section == nil then
+		error("WARP CBI: missing UCI section for option " .. tostring(self.option))
+	end
+
+	return original_cbid(self, section)
+end
+
 local m = Map("warp",
 	translate("Cloudflare WARP MASQUE 代理"),
 	translate("基于 MASQUE / Connect-IP 协议的 WARP 代理。此插件不使用 WireGuard。首次使用请先注册设备。"))
@@ -30,8 +50,6 @@ local pass = s:option(Value, "password", translate("代理密码（可选）"))
 pass.password = true
 pass.rmempty = true
 
--- Keep action buttons in the named UCI section. A section-less SimpleSection
--- can yield a nil section on some LuCI versions when rendering CBI options.
 local reg = s:option(Button, "_register", translate("注册 WARP 设备"))
 reg.inputtitle = translate("注册 WARP 设备")
 reg.inputstyle = "apply"
