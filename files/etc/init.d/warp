@@ -6,10 +6,12 @@ STOP=10
 
 ensure_warp_user() {
 	if ! id warp >/dev/null 2>&1; then
-		addgroup -S warp >/dev/null 2>&1 || {
-			logger -t warp "Cannot create dedicated warp group"
-			return 1
-		}
+		if ! grep -q '^warp:' /etc/group; then
+			addgroup -S warp >/dev/null 2>&1 || {
+				logger -t warp "Cannot create dedicated warp group"
+				return 1
+			}
+		fi
 		adduser -S -D -H -h /var/run/warp -s /bin/false warp warp >/dev/null 2>&1 || {
 			logger -t warp "Cannot create dedicated warp user"
 			return 1
@@ -25,26 +27,46 @@ start_service() {
 	. /lib/functions.sh
 	config_load warp
 	config_get_bool enabled main enabled 0
-	[ "$enabled" -eq 1 ] || return 0
+	[ "$enabled" -eq 1 ] || {
+		logger -t warp "Service is disabled in UCI configuration"
+		return 0
+	}
 
-	CONFIG="/etc/usque/config.json"
+	CONFIG_DIR="/etc/usque"
+	CONFIG="$CONFIG_DIR/config.json"
 	[ -s "$CONFIG" ] || {
 		logger -t warp "No MASQUE config found. Run: warpctl register"
 		return 0
 	}
 
+	[ -x /usr/bin/usque ] || {
+		logger -t warp "Missing or non-executable /usr/bin/usque"
+		return 1
+	}
+
 	ensure_warp_user || return 1
-	chmod 0750 /etc/usque
-	chown root:warp "$CONFIG"
-	chmod 0640 "$CONFIG"
+
+	# The daemon runs as user/group warp. The old package changed the
+	# directory mode to 0750 but left it owned by root:root, preventing
+	# the unprivileged daemon from traversing /etc/usque to read config.json.
+	chown root:warp "$CONFIG_DIR" || {
+		logger -t warp "Cannot set /etc/usque group ownership"
+		return 1
+	}
+	chmod 0750 "$CONFIG_DIR" || return 1
+	chown root:warp "$CONFIG" || {
+		logger -t warp "Cannot set MASQUE config group ownership"
+		return 1
+	}
+	chmod 0640 "$CONFIG" || return 1
 
 	# Dedicated UID + early main-table rule prevents proxy policy marks
 	# from capturing WARP's own MASQUE/QUIC sockets. The prohibit fallback
 	# makes missing WAN routes fail closed instead of falling through.
-	/usr/bin/warp-route start || {
+	if ! /usr/bin/warp-route start; then
 		logger -t warp "WARP route isolation failed; refusing to start"
 		return 1
-	}
+	fi
 
 	config_get bind main bind '0.0.0.0'
 	config_get socks_port main socks_port '32500'
