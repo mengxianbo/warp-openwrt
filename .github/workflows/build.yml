@@ -1,0 +1,72 @@
+name: Build WARP MASQUE IPK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout package
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26.3"
+          cache: false
+
+      - name: Build upstream usque (MASQUE only)
+        env:
+          GOTOOLCHAIN: auto
+          CGO_ENABLED: "0"
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          git clone --depth 1 --branch v3.0.1 https://github.com/Diniboy1123/usque.git /tmp/usque-src
+          cd /tmp/usque-src
+          go build -trimpath -ldflags="-s -w" -o "$GITHUB_WORKSPACE/usque" .
+
+      - name: Package IPK
+        run: |
+          set -eux
+          chmod 0755 usque
+          ./scripts/build-ipk.sh
+          mkdir -p dist
+          mv ./*.ipk dist/
+
+      - name: Verify IPK
+        run: |
+          set -eux
+          ipk="$(find dist -maxdepth 1 -name '*.ipk' -print -quit)"
+          test -n "$ipk"
+          ar t "$ipk"
+          mkdir -p /tmp/ipk-check
+          cd /tmp/ipk-check
+          ar x "$GITHUB_WORKSPACE/$ipk"
+          tar -tzf control.tar.gz
+          tar -tzf data.tar.gz
+          tar -xOf control.tar.gz ./control | grep -E '^(Package|Version|Architecture):'
+          test -s "$GITHUB_WORKSPACE/usque"
+
+      - name: Upload IPK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warp-masque-openwrt-23.05.5-x86_64
+          path: dist/*.ipk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: WARP MASQUE IPK build ${{ github.run_number }}
+          generate_release_notes: true
+          files: dist/*.ipk
