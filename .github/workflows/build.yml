@@ -45,10 +45,13 @@ jobs:
           set -eux
           ipk="$(find dist -maxdepth 1 -name '*.ipk' -print -quit)"
           test -n "$ipk"
-          ar t "$ipk"
+          tar -tzf "$ipk" | tee /tmp/ipk-members.txt
+          grep -q "debian-binary" /tmp/ipk-members.txt
+          grep -q "control.tar.gz" /tmp/ipk-members.txt
+          grep -q "data.tar.gz" /tmp/ipk-members.txt
           mkdir -p /tmp/ipk-check
+          tar -xzf "$GITHUB_WORKSPACE/$ipk" -C /tmp/ipk-check
           cd /tmp/ipk-check
-          ar x "$GITHUB_WORKSPACE/$ipk"
           tar -tzf control.tar.gz
           tar -tzf data.tar.gz
           tar -xOf control.tar.gz ./control | grep -E '^(Package|Version|Architecture):'
