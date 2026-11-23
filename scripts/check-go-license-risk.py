@@ -38,12 +38,12 @@ def classify(value):
         return "UNKNOWN", "Unknown or unrecognized license; manual identification required"
     if "AGPL" in v or "AFFERO" in v:
         return "HIGH", "AGPL network copyleft; legal review required before distribution/service use"
-    if "GPL" in v or "GNU GENERAL PUBLIC LICENSE" in v:
-        return "HIGH", "GPL copyleft; review linking, distribution and source-offer obligations"
     if any(x in v for x in ("SSPL", "BUSL", "COMMONS CLAUSE", "PROPRIETARY", "NONCOMMERCIAL")):
         return "HIGH", "Source-available or restricted license; compatibility review required"
     if any(x in v for x in ("LGPL", "MPL", "EPL", "CDDL")):
         return "REVIEW", "Weak-copyleft license; review file/module and distribution obligations"
+    if "GPL" in v or "GNU GENERAL PUBLIC LICENSE" in v:
+        return "HIGH", "GPL copyleft; review linking, distribution and source-offer obligations"
     if v in PERMISSIVE:
         return "OK", "Common permissive license"
     # Expressions and compound license declarations need a human review, even if they
