@@ -3,7 +3,7 @@ set -eu
 ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 STAGE="$ROOT/build/root"
 CONTROL="$ROOT/build/control"
-VERSION="1.0.0"
+VERSION="1.0.1"
 PKG="warp-masque"
 ARCH="x86_64"
 
