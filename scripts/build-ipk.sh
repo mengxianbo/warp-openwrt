@@ -7,7 +7,7 @@ VERSION="1.0.0"
 PKG="warp-masque"
 ARCH="x86_64"
 
-command -v ar >/dev/null 2>&1 || { echo "binutils (ar) is required" >&2; exit 1; }
+command -v tar >/dev/null 2>&1 || { echo "tar is required" >&2; exit 1; }
 test -x "$ROOT/usque" || { echo "usque binary missing" >&2; exit 1; }
 
 rm -rf "$ROOT/build"
@@ -46,8 +46,6 @@ EOF
   tar --numeric-owner --owner=0 --group=0 -czf "$ROOT/build/data.tar.gz" .
 )
 printf '2.0\n' > "$ROOT/build/debian-binary"
-(
-  cd "$ROOT/build"
-  ar r "$ROOT/$PKG"_"$VERSION-1"_"$ARCH".ipk debian-binary control.tar.gz data.tar.gz
-)
+tar -czf "$ROOT/${PKG}_${VERSION}-1_${ARCH}.ipk" -C "$ROOT/build" \\
+  ./debian-binary ./control.tar.gz ./data.tar.gz
 echo "Created ${ROOT}/${PKG}_${VERSION}-1_${ARCH}.ipk"
