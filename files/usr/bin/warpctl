@@ -27,7 +27,10 @@ case "${1:-}" in
     /etc/init.d/warp restart
     ;;
   stop)
+    uci set warp.main.enabled='0'
+    uci commit warp
     /etc/init.d/warp stop
+    /etc/init.d/warp disable
     ;;
   restart)
     /etc/init.d/warp restart
@@ -38,6 +41,7 @@ case "${1:-}" in
     if [ -s "$CONFIG" ]; then echo "注册配置：已存在"; else echo "注册配置：未注册"; fi
     echo "SOCKS5 进程：$(pgrep -af 'usque.*socks' || true)"
     echo "HTTP 进程：$(pgrep -af 'usque.*http-proxy' || true)"
+    /usr/bin/warp-route status 2>/dev/null || true
     ;;
   log)
     logread -e usque
