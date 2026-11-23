@@ -32,6 +32,12 @@ jobs:
           cd /tmp/usque-src
           go build -trimpath -ldflags="-s -w" -o "$GITHUB_WORKSPACE/usque" .
 
+      - name: Shell syntax checks
+        run: |
+          sh -n files/usr/bin/warpctl
+          sh -n files/usr/bin/warp-route
+          sh -n files/etc/init.d/warp
+
       - name: Package IPK
         run: |
           set -eux
