@@ -38,3 +38,14 @@ This repository does not relicense those components.
 Cloudflare and WARP are trademarks and services of Cloudflare, Inc. This is
 an independent, unofficial community project and is not affiliated with,
 endorsed by, or sponsored by Cloudflare.
+
+## Automated Go license risk checks
+
+Every build classifies the generated Go dependency license inventory and publishes
+`GO_LICENSE_RISK_REPORT.md` in the IPK and GitHub Release. Known GPL/AGPL,
+source-available/restricted, weak-copyleft, and compound license declarations
+produce GitHub Actions warnings and require human compatibility review. Empty,
+unknown, or unrecognized license identifiers fail the build until identified
+and reviewed. The scanner uses a conservative allow-list; it is an automated
+triage control, not legal advice or a substitute for reviewing the actual
+license text, dependency usage, and distribution model.
