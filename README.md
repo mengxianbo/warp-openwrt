@@ -37,7 +37,7 @@ opkg install \
 cd /tmp
 
 wget -O warp-masque_1.0.0-1_x86_64.ipk \
-"https://github.com/mengxianbo/warp-openwrt/releases/download/build-20/warp-masque_1.0.0-1_x86_64.ipk"
+"https://github.com/mengxianbo/warp-openwrt/releases/download/build-25/warp-masque_1.0.0-1_x86_64.ipk"
 
 # 4. 检查安装包
 ls -lh /tmp/warp-masque_1.0.0-1_x86_64.ipk
