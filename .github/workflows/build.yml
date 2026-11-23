@@ -34,6 +34,20 @@ jobs:
           cd /tmp/usque-src
           go build -trimpath -ldflags="-s -w" -o "$GITHUB_WORKSPACE/usque" .
 
+      - name: Scan Go dependency licenses
+        env:
+          GOTOOLCHAIN: auto
+        run: |
+          set -eux
+          go install github.com/google/go-licenses/v2@v2.0.1
+          export PATH="$(go env GOPATH)/bin:$PATH"
+          mkdir -p "$GITHUB_WORKSPACE/go-dependency-licenses"
+          cd /tmp/usque-src
+          go-licenses report . > "$GITHUB_WORKSPACE/go-dependency-licenses/GO_DEPENDENCY_LICENSES.csv"
+          go-licenses save . --save_path="$GITHUB_WORKSPACE/go-dependency-licenses"
+          test -s "$GITHUB_WORKSPACE/go-dependency-licenses/GO_DEPENDENCY_LICENSES.csv"
+          find "$GITHUB_WORKSPACE/go-dependency-licenses" -type f -print
+
       - name: Shell syntax checks
         run: |
           sh -n files/usr/bin/warpctl
@@ -65,8 +79,34 @@ jobs:
           grep -q "usr/share/licenses/warp-masque/LICENSE" /tmp/ipk-data-members.txt
           grep -q "usr/share/licenses/warp-masque/usque-MIT.txt" /tmp/ipk-data-members.txt
           grep -q "usr/share/licenses/warp-masque/THIRD_PARTY_NOTICES.md" /tmp/ipk-data-members.txt
+          grep -q "usr/share/licenses/warp-masque/go-dependencies/GO_DEPENDENCY_LICENSES.csv" /tmp/ipk-data-members.txt
           tar -xOf control.tar.gz ./control | grep -E '^(Package|Version|Architecture|License):'
-          tar -xOf control.tar.gz ./control | grep -q '^License: MIT$'
+          tar -xOf control.tar.gz ./control | grep -q '^License: MIT          test -s "$GITHUB_WORKSPACE/usque"
+
+      - name: Upload IPK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: warp-masque-openwrt-23.05.5-x86_64
+          path: dist/*.ipk
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish GitHub Release
+        if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: WARP MASQUE IPK build ${{ github.run_number }}
+          generate_release_notes: true
+          files: |
+            dist/*.ipk
+            go-dependency-licenses/GO_DEPENDENCY_LICENSES.csv
+            go-dependency-licenses/**/LICENSE*
+            go-dependency-licenses/**/LICENCE*
+            go-dependency-licenses/**/COPYING*
+            go-dependency-licenses/**/NOTICE*
+
+          tar -xOf data.tar.gz ./usr/share/licenses/warp-masque/go-dependencies/GO_DEPENDENCY_LICENSES.csv | test -s /dev/stdin
           test -s "$GITHUB_WORKSPACE/usque"
 
       - name: Upload IPK artifact
