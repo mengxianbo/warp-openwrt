@@ -1,0 +1,12 @@
+{
+  "luci-app-warp": {
+    "description": "Grant access to WARP MASQUE LuCI configuration",
+    "read": {
+      "ubus": {},
+      "uci": [ "warp" ]
+    },
+    "write": {
+      "uci": [ "warp" ]
+    }
+  }
+}
