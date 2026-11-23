@@ -73,10 +73,11 @@ isolation.default = translate("WARP 使用独立 UID warp；策略优先级 90 �
 
 local reg_state = s:option(DummyValue, "_register_state", translate("WARP 注册状态"))
 reg_state.rawhtml = false
-if fs.access(config_file) then
-	reg_state.default = translate("已检测到注册配置。重复点击注册不会创建新设备。")
-else
-	reg_state.default = translate("尚未注册。点击下方按钮开始注册。")
+function reg_state.cfgvalue(self, section)
+	if fs.access(config_file) then
+		return translate("已检测到注册配置。重复点击注册不会创建新设备。")
+	end
+	return translate("尚未注册。点击下方按钮开始注册。")
 end
 
 local reg = s:option(Button, "_register", translate("注册 WARP 设备"))
@@ -95,7 +96,9 @@ end
 
 local register_log_view = s:option(DummyValue, "_register_log", translate("注册结果 / 错误详情"))
 register_log_view.rawhtml = false
-register_log_view.default = read_register_log()
+function register_log_view.cfgvalue(self, section)
+	return read_register_log()
+end
 
 local enroll = s:option(Button, "_enroll", translate("重新注册 MASQUE 密钥"))
 enroll.inputtitle = translate("重新注册")
