@@ -236,3 +236,16 @@ logread | grep -iE 'warp|usque|register|error' | tail -n 100
 - 不要向 WAN/公网开放未认证的代理端口。
 - Cloudflare 注册、服务可用性、速度和使用限制由 Cloudflare 服务条款决定。
 - 上游客户端：Diniboy1123/usque（MIT）：https://github.com/Diniboy1123/usque
+
+
+## 11. 开源协议与第三方声明
+
+本仓库中由项目维护者原创的项目文件采用 **MIT License**，具体范围以根目录 `LICENSE` 文件中的 Scope 说明为准。
+
+- 第三方组件及其版权不因本项目采用 MIT 而改变。
+- WARP MASQUE 客户端使用上游 [Diniboy1123/usque](https://github.com/Diniboy1123/usque) v3.0.1，采用其原有 MIT 许可证；许可证文本见 [LICENSES/usque-MIT.txt](LICENSES/usque-MIT.txt)。
+- 第三方组件清单见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+- 欢迎提交改进，参见 [CONTRIBUTING.md](CONTRIBUTING.md)。
+- 安全问题请参见 [SECURITY.md](SECURITY.md)。
+
+安装包会在 `/usr/share/licenses/warp-masque/` 中保留项目和 usque 的许可证文本。
