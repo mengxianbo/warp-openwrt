@@ -1,24 +1,25 @@
-# WARP MASQUE for OpenWrt
+# OpenWrt WARP MASQUE 插件
 
-[简体中文文档](README.zh-CN.md)
+本项目是适用于 OpenWrt 的 Cloudflare WARP **MASQUE / Connect-IP** 插件，基于 [usque](https://github.com/Diniboy1123/usque) 实现，不包含 WireGuard。
 
-OpenWrt LuCI package for Cloudflare WARP **MASQUE / Connect-IP** using [usque](https://github.com/Diniboy1123/usque). This project does not include WireGuard.
+## 适用平台与功能
 
-## Target and features
+- 适用于 OpenWrt 23.05.5
+- 处理器架构：x86_64
+- 仅使用 Cloudflare WARP **MASQUE** 协议（usque / Connect-IP）
+- SOCKS5 代理默认监听：`0.0.0.0:32500`
+- HTTP CONNECT 代理默认监听：`0.0.0.0:32511`
+- 提供中文 LuCI 管理界面
+- 可在 LuCI 界面自定义监听地址、SOCKS5 端口和 HTTP 端口
+- 通过 GitHub Actions 自动编译 IPK 安装包并发布版本
 
-- OpenWrt 23.05.5
-- x86_64
-- Cloudflare WARP **MASQUE only** (usque / Connect-IP)
-- SOCKS5 proxy: `0.0.0.0:32500` by default
-- HTTP CONNECT proxy: `0.0.0.0:32511` by default
-- Chinese LuCI configuration page
-- SOCKS5 and HTTP ports and bind address can be customized in LuCI
-- GitHub Actions builds the IPK and publishes it as a GitHub Release asset
+安装包内置静态编译的 Go 语言 usque 程序。SOCKS5 和 HTTP 代理分别由 procd 服务管理，共用同一份 MASQUE 注册配置。
 
-The package embeds a statically linked Go `usque` binary. SOCKS5 and HTTP proxy modes run as separate supervised procd services and share one MASQUE registration/configuration.
+## 安装或升级
 
-## Install or upgrade
+请通过 SSH 登录 OpenWrt，并使用 root 账户执行以下命令。
 
+```sh
 # 1. 更新软件包索引
 opkg update
 
@@ -32,7 +33,7 @@ opkg install \
     tar \
     gzip
 
-# 3. 下载最新版 WARP MASQUE IPK
+# 3. 下载最新版 WARP MASQUE 安装包
 cd /tmp
 
 wget -O warp-masque_1.0.0-1_x86_64.ipk \
@@ -60,48 +61,52 @@ echo
 ls -lh /usr/bin/warpctl /usr/bin/usque 2>/dev/null
 echo
 uci show warp 2>/dev/null
-> This package is built for x86_64. Do not install it on a different CPU architecture.
-
-### Important when upgrading an existing installation
-
-- The upgrade command above reinstalls the package files; it does not require you to register a new WARP device.
-- Keep the existing `/etc/usque/config.json` registration file. **Do not delete `/etc/usque` and do not run registration again just to upgrade the package.**
-- If you have customized settings, check them after upgrading with `uci show warp`.
-- Back up `/etc/usque/config.json` securely. It contains device/account credentials; do not post it publicly.
-
-## Open the LuCI page
-
-After installation, sign in to LuCI and open:
-
-**Services → WARP MASQUE**
-
-Direct URL:
-
-```text
-http://<router-LAN-IP>/cgi-bin/luci/admin/services/warp
 ```
 
-For example, replace `<router-LAN-IP>` with your OpenWrt router's LAN address.
+> **注意：** 此安装包仅适用于 x86_64 架构，请勿安装到其他处理器架构的设备。
 
-The page provides the enable switch, bind address, SOCKS5 and HTTP port settings, registration controls, and service controls. Default ports:
+### 已安装设备升级注意事项
 
-| Service | Default listen address | Default port |
+- 上述命令会重新安装插件文件，正常升级不需要重新注册 WARP 设备。
+- 请保留现有的 `/etc/usque/config.json` 注册文件。**不要删除 `/etc/usque` 目录，也不要仅仅为了升级而重新注册。**
+- 如果此前修改过插件配置，升级后请使用 `uci show warp` 检查配置。
+- 建议妥善备份 `/etc/usque/config.json`。该文件包含设备和账户凭据，请勿公开发布或发送给他人。
+
+## 打开 LuCI 管理页面
+
+安装完成后，登录 OpenWrt 管理后台，进入：
+
+**服务 → WARP MASQUE**
+
+也可以直接访问：
+
+```text
+http://<路由器局域网地址>/cgi-bin/luci/admin/services/warp
+```
+
+请将上述地址中的 `<路由器局域网地址>` 替换为 OpenWrt 路由器的实际局域网 IP 地址。
+
+管理页面提供启用开关、监听地址、SOCKS5 和 HTTP 端口设置、设备注册及服务控制功能。
+
+默认端口如下：
+
+| 服务类型 | 默认监听地址 | 默认端口 |
 |---|---|---:|
 | SOCKS5 | `0.0.0.0` | `32500` |
 | HTTP CONNECT | `0.0.0.0` | `32511` |
 
-The bind address and ports can be changed in LuCI. Save and apply the settings after editing.
+可以在 LuCI 页面修改监听地址和端口。修改后请保存并应用配置。
 
-## First-time WARP registration
+## 首次注册 WARP 设备
 
-Only perform registration on a **new installation that has no existing** `/etc/usque/config.json`.
+**仅当设备是首次安装，并且不存在** `/etc/usque/config.json` **时，才需要执行注册。**
 
-1. Make sure the router can access the Internet.
-2. Open **Services → WARP MASQUE**.
-3. Click **注册 WARP 设备** and wait for registration to finish.
-4. Start the service and check its status.
+1. 确保路由器可以正常访问互联网。
+2. 打开 **服务 → WARP MASQUE**。
+3. 点击“注册 WARP 设备”，等待注册完成。
+4. 启动服务并检查运行状态。
 
-CLI alternative:
+也可以通过 SSH 执行：
 
 ```sh
 warpctl register
@@ -109,20 +114,22 @@ warpctl start
 warpctl status
 ```
 
-Registration may be rate-limited by Cloudflare. Do not repeatedly register if a valid `/etc/usque/config.json` already exists.
+Cloudflare 可能对设备注册进行频率限制。如果已经存在有效的 `/etc/usque/config.json`，请勿反复注册。
 
-## Configure LAN clients
+## 局域网设备使用代理
 
-Set the proxy address on each LAN client to the OpenWrt router's LAN IP:
+在需要使用代理的局域网设备上，将代理服务器地址设置为 OpenWrt 路由器的局域网 IP 地址：
 
-- SOCKS5: `<router-LAN-IP>:32500`
-- HTTP proxy: `<router-LAN-IP>:32511`
+- SOCKS5：`<路由器局域网地址>:32500`
+- HTTP 代理：`<路由器局域网地址>:32511`
 
-For SOCKS5 clients, use remote DNS mode (often shown as SOCKS5 hostname resolution or `socks5h`) if you want DNS requests to be resolved through the proxy.
+如果希望 DNS 查询也通过 SOCKS5 代理转发，请在客户端启用远程 DNS 解析模式，部分软件将其标记为 SOCKS5 主机名解析或 `socks5h`。
 
-The default bind address is `0.0.0.0` so LAN clients can connect. These proxy listeners are not intended to be exposed to the public Internet. Keep the OpenWrt WAN input firewall policy enabled and restrict access to trusted LAN devices. Use proxy authentication if needed.
+默认监听地址为 `0.0.0.0`，因此局域网设备可以连接代理端口。这些代理端口不应直接暴露到公网。请保持 OpenWrt WAN 入站防火墙策略，并限制为可信任的局域网设备访问；如有需要，请使用代理认证。
 
-## Start, stop and inspect from SSH
+## 通过 SSH 管理服务
+
+启动、查看状态和停止服务：
 
 ```sh
 warpctl start
@@ -130,66 +137,76 @@ warpctl status
 warpctl stop
 ```
 
-View related system logs:
+查看相关系统日志：
 
 ```sh
 logread -e usque
 logread -e warp
 ```
 
-Check whether the local proxy ports are listening:
+检查代理端口是否正在监听：
 
 ```sh
 netstat -lntp 2>/dev/null | grep -E ':32500|:32511' || ss -lntp | grep -E ':32500|:32511'
 ```
 
-Test the proxies locally on the router:
+在路由器本机测试代理：
 
 ```sh
 curl -x socks5h://127.0.0.1:32500 https://www.cloudflare.com/cdn-cgi/trace
 curl -x http://127.0.0.1:32511 https://www.cloudflare.com/cdn-cgi/trace
 ```
 
-A successful Cloudflare trace should contain:
+如果代理连接成功，Cloudflare 检测结果中通常应包含：
 
 ```text
 warp=on
 ```
 
-If the page or proxy does not work, collect diagnostics before changing the registration:
+## 故障诊断
+
+如果管理页面或代理无法正常工作，请先收集以下诊断信息，不要急于删除注册配置或重新注册：
 
 ```sh
-echo "===== package ====="
+echo "===== 插件安装信息 ====="
 opkg status warp-masque 2>/dev/null || opkg list-installed | grep -i warp
 
-echo "===== UCI ====="
+echo "===== 插件配置 ====="
 uci show warp
 
-echo "===== processes ====="
+echo "===== 相关进程 ====="
 ps w | grep -E '[u]sque|[w]arp'
 
-echo "===== listeners ====="
+echo "===== 代理监听端口 ====="
 (netstat -lntp 2>/dev/null || ss -lntp) | grep -E ':32500|:32511' || true
 
-echo "===== logs ====="
+echo "===== 相关系统日志 ====="
 logread | grep -iE 'warp|usque' | tail -n 100
 ```
 
-## Build
+## 编译与发布
 
-Push to `main` or manually run **Actions → Build WARP MASQUE IPK**. The workflow builds upstream usque v3.0.1 for Linux amd64, packages the LuCI files and binary into an IPK, checks the archive structure, uploads the artifact, and publishes a versioned release.
+向 `main` 分支推送提交，或在 GitHub 仓库的“操作”页面手动运行“编译 WARP MASQUE 安装包”工作流。
 
-- Workflow: [Build WARP MASQUE IPK](https://github.com/mengxianbo/warp-openwrt/actions/workflows/build.yml)
-- Releases: [GitHub Releases](https://github.com/mengxianbo/warp-openwrt/releases)
+工作流会执行以下操作：
 
-## Scope and security notes
+1. 获取上游 usque v3.0.1 源码。
+2. 为 Linux amd64 架构编译程序。
+3. 将 LuCI 文件和程序打包为 IPK 安装包。
+4. 检查安装包内部结构。
+5. 上传编译产物并创建 GitHub Release。
 
-- This is a SOCKS5 and HTTP CONNECT proxy service. It is **not** a router-wide transparent proxy, TUN interface, or automatic default-route takeover.
-- SOCKS5 and HTTP proxy traffic between LAN clients and the router is not encrypted by these proxy protocols. Use trusted LANs, firewall restrictions, and proxy authentication as appropriate.
-- Do not expose unauthenticated proxy ports to the WAN/public Internet.
-- Cloudflare registration, service availability, throughput, and usage policies are controlled by Cloudflare.
-- Upstream project/license: [Diniboy1123/usque](https://github.com/Diniboy1123/usque), MIT.
+- 编译工作流：[WARP MASQUE 自动编译](https://github.com/mengxianbo/warp-openwrt/actions/workflows/build.yml)
+- 安装包发布页：[GitHub 版本发布](https://github.com/mengxianbo/warp-openwrt/releases)
 
-### IPK packaging
+## 功能范围与安全说明
 
-Release packages use the native OpenWrt gzip-compressed tar container (`debian-binary`, `control.tar.gz`, and `data.tar.gz`), not a Debian `ar` archive. The CI workflow verifies the outer package structure before publishing.
+- 本插件提供 SOCKS5 和 HTTP CONNECT 代理服务，**不是**全局透明代理，不创建 TUN 网卡，也不会自动接管路由器默认出口。
+- 局域网设备与路由器之间的 SOCKS5、HTTP 代理连接本身不提供加密。请在可信任的局域网内使用，并根据需要配置防火墙限制和代理认证。
+- 不要将未设置认证的代理端口暴露到 WAN 或公网。
+- WARP 注册、服务可用性、连接速度和使用政策由 Cloudflare 决定。
+- 上游项目及许可证：[Diniboy1123/usque](https://github.com/Diniboy1123/usque)，MIT 许可证。
+
+## IPK 安装包格式
+
+发布的安装包采用 OpenWrt 使用的 gzip 压缩 tar 容器，内部包含 `debian-binary`、`control.tar.gz` 和 `data.tar.gz`，并非 Debian 的 `ar` 格式归档。自动编译流程会在发布前检查安装包结构。
